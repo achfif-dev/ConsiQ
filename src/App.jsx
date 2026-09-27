@@ -57,7 +57,7 @@ function TabLoadingFallback() {
   );
 }
 
-export default function GWGSuperApp() {
+export default function ConsiQSuperApp() {
   // Tombol refresh manual — versi PWA/browser punya gesture "tarik ke bawah
   // untuk refresh" bawaan Chrome, tapi WebView native (APK) tidak punya ini
   // sama sekali. Data sebenarnya sudah live-sync lewat Firebase real-time
@@ -834,7 +834,7 @@ export default function GWGSuperApp() {
   // cuma disembunyikan di UI, supaya tidak bisa "ditembus" lewat tab manapun.
   const tolakViewer = useCallback(() => { alert("Anda login sebagai Viewer (hanya bisa melihat). Hubungi Admin untuk menaikkan akses Anda jika perlu mengubah data."); }, []);
   // ✅ CODE-SPLITTING/MEMO: dibungkus useCallback (sebelumnya arrow function
-  // biasa, ganti referensi setiap kali GWGSuperApp re-render). Ini WAJIB
+  // biasa, ganti referensi setiap kali ConsiQSuperApp re-render). Ini WAJIB
   // supaya React.memo() di komponen-komponen Tab (lihat features/*/Tab*.jsx)
   // benar-benar berefek — kalau fungsi ini terus berganti referensi, memo
   // akan selalu menganggap props "berubah" dan tetap re-render semuanya,

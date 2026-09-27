@@ -8,8 +8,7 @@
 // wizard: nama, logo, warna, dan Firebase project mereka sendiri.
 //
 // Prioritas nilai: localStorage (diisi lewat wizard) → DEFAULT bawaan
-// (identitas Generasi Wangi Group, supaya instance yang sudah berjalan
-// sekarang tidak berubah/rusak kalau belum pernah mengisi wizard).
+// (identitas ConsiQ Super App — Smart Consignment Platform).
 
 import { DEFAULT_FONT_VALUE } from "../theme/fonts";
 
@@ -46,12 +45,12 @@ const _envFirebase = {
 // tidak berubah karena nilai lama tetap dipakai sebagai fallback string di
 // sisi kanan (||) kalau env belum diisi.
 const _envBrand = {
-  companyName: import.meta.env.VITE_APP_COMPANY_NAME || "Generasi Wangi Group",
-  appName: import.meta.env.VITE_APP_SHORT_NAME || "GWG Super App",
-  tagline: import.meta.env.VITE_APP_TAGLINE || "Super App · Sistem Manajemen Konsinyasi",
+  companyName: import.meta.env.VITE_APP_COMPANY_NAME || "ConsiQ Super App",
+  appName: import.meta.env.VITE_APP_SHORT_NAME || "ConsiQ Super App",
+  tagline: import.meta.env.VITE_APP_TAGLINE || "Smart Consignment Platform",
   footerText: import.meta.env.VITE_APP_FOOTER || "Generasi Wangi Group · Sampang, Jawa Timur",
-  primaryColor: import.meta.env.VITE_APP_PRIMARY_COLOR || "#0F4C35",
-  accentColor: import.meta.env.VITE_APP_ACCENT_COLOR || "#C49A1A",
+  primaryColor: import.meta.env.VITE_APP_PRIMARY_COLOR || "#0B2A57",
+  accentColor: import.meta.env.VITE_APP_ACCENT_COLOR || "#2FD0C8",
 };
 
 const DEFAULT_CONFIG = {

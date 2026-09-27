@@ -2,23 +2,23 @@ import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { saveOrShareBlob, saveWorkbookNative } from "./fileSave";
-import { GWG_EXPORT_LOGO_B64 } from "../theme/logo";
+import { CONSIQ_EXPORT_LOGO_B64 } from "../theme/logo";
 import { loadAppConfig, lighten } from "../config/appConfig";
 
 // ✅ WHITE LABEL: nama & logo di semua ekspor (Excel/PDF/Print/Gambar)
 // memakai identitas brand yang diisi lewat Setup Wizard — jatuh balik ke
-// logo bawaan GWG kalau belum pernah diisi logo custom.
+// logo bawaan ConsiQ kalau belum pernah diisi logo custom.
 const _brand = loadAppConfig().brand;
 const BRAND_NAME = _brand.companyName;
 const BRAND_TAGLINE = _brand.tagline;
-const BRAND_LOGO = _brand.logoDataUrl || GWG_EXPORT_LOGO_B64;
-// ✅ OPTIMASI: fallback pakai file /logo.png (bukan base64 GWG_LOGO_B64
+const BRAND_LOGO = _brand.logoDataUrl || CONSIQ_EXPORT_LOGO_B64;
+// ✅ OPTIMASI: fallback pakai file /logo.png (bukan base64 CONSIQ_EXPORT_LOGO_B64
 // yang sudah dihapus dari bundle) — aman di sini karena dipakai sebagai
 // <img src> di HTML export (exportHTML), bukan di-embed biner ke PDF/Excel.
 const BRAND_LOGO_FALLBACK = _brand.logoDataUrl || "/logo.png";
 // ✅ FIX WARNA EKSPOR: sebelumnya warna header PDF/Excel/Print/Gambar
 // hardcode hijau GWG ("#0F4C35") walau nama/logo sudah ikut brand —
-// akibatnya laporan perusahaan lain tetap berwarna hijau GWG. Sekarang
+// akibatnya laporan perusahaan lain tetap berwarna hijau lama. Sekarang
 // ikut brand.primaryColor juga.
 const BRAND_COLOR = _brand.primaryColor || "#0F4C35";
 // Varian terang dari warna brand, dipakai untuk teks tagline/meta di atas
@@ -557,7 +557,7 @@ export async function exportJPG(data, columns, title, filename) {
       }, "image/jpeg", 0.92);
     }
 
-    // Logo digambar dari gambar raster asli (GWG_EXPORT_LOGO_B64), BUKAN
+    // Logo digambar dari gambar raster asli (CONSIQ_EXPORT_LOGO_B64), BUKAN
     // bentuk vektor. Sebelumnya sempat diganti ke vektor karena drawImage()
     // dipanggil sebelum gambar selesai di-decode, sehingga di sebagian
     // WebView Android (.apk) logo gagal muncul (kosong/putih). Perbaikannya:

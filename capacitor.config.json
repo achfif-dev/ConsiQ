@@ -1,6 +1,6 @@
 {
   "appId": "com.gwg.superapp",
-  "appName": "GWG App",
+  "appName": "ConsiQ Super App",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {
