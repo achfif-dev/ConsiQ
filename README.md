@@ -40,7 +40,7 @@ Aplikasi ini **white label** — instance bawaan sudah dikonfigurasi untuk **Gen
 
 ## 1. Ringkasan Aplikasi
 
-GWG Super App adalah aplikasi web (Progressive Web App) yang menangani seluruh proses bisnis konsinyasi produk ke toko-toko, mulai dari:
+ConsiQ Super App adalah aplikasi web (Progressive Web App) yang menangani seluruh proses bisnis konsinyasi produk ke toko-toko, mulai dari:
 
 - Pendataan **wilayah**, **rute**, dan **toko** tempat produk dititipkan.
 - Pendataan **produk** dan harga.
