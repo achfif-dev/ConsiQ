@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Alat Pulihkan Backup — GWG Super App</title>
+<title>Alat Pulihkan Backup — ConsiQ Super App</title>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -234,7 +234,7 @@
         const data = parsed && parsed.data ? parsed.data : parsed;
         const looksValid = data && ["wilayah","rute","toko","produk","kontrol","pengguna"].some(k => Array.isArray(data[k]));
         if (!looksValid) {
-          el("fileStatus").innerHTML = `<span class="err">⚠️ File tidak dikenali sebagai backup GWG SuperApp yang valid.</span>`;
+          el("fileStatus").innerHTML = `<span class="err">⚠️ File tidak dikenali sebagai backup ConsiQ Super App yang valid.</span>`;
           return;
         }
         backupData = data;
