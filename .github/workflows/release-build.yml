@@ -1,0 +1,250 @@
+name: Build Signed Release APK/AAB
+
+# Dipicu manual dari tab Actions ("Run workflow"). Butuh 4 secret sudah
+# tersimpan lebih dulu (lihat workflow "Generate Release Keystore").
+# Hasil akhirnya APK + AAB yang SUDAH DITANDATANGANI (siap diinstal
+# langsung / diupload ke Play Console), beda dari build debug biasa
+# yang cuma untuk testing dan tidak bisa dipakai untuk rilis ke user.
+on:
+  workflow_dispatch:
+    inputs:
+      versionName:
+        description: "Nomor versi yang tampil ke user (mis. 1.1.0). Kosongkan untuk pakai default di build.gradle."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cek 4 secret keystore sudah ada
+        run: |
+          missing=0
+          [ -z "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" ] && echo "❌ RELEASE_KEYSTORE_BASE64 belum di-set" && missing=1
+          [ -z "${{ secrets.RELEASE_KEYSTORE_PASSWORD }}" ] && echo "❌ RELEASE_KEYSTORE_PASSWORD belum di-set" && missing=1
+          [ -z "${{ secrets.RELEASE_KEY_ALIAS }}" ] && echo "❌ RELEASE_KEY_ALIAS belum di-set" && missing=1
+          [ -z "${{ secrets.RELEASE_KEY_PASSWORD }}" ] && echo "❌ RELEASE_KEY_PASSWORD belum di-set" && missing=1
+          if [ "$missing" = "1" ]; then
+            echo
+            echo "Jalankan dulu workflow \"Generate Release Keystore\", lalu simpan"
+            echo "4 secret di atas lewat Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Buat file .env dari GitHub Secrets (tidak pernah di-commit)
+        run: |
+          cat > .env << 'EOF'
+          VITE_APP_TITLE=${{ secrets.VITE_APP_TITLE }}
+          VITE_APP_SHORT_NAME=${{ secrets.VITE_APP_SHORT_NAME }}
+          VITE_APP_DESCRIPTION=${{ secrets.VITE_APP_DESCRIPTION }}
+          VITE_APP_ID=${{ secrets.VITE_APP_ID }}
+          VITE_THEME_COLOR=${{ secrets.VITE_THEME_COLOR }}
+          VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_DATABASE_URL=${{ secrets.VITE_FIREBASE_DATABASE_URL }}
+          VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_SUPER_ADMIN_EMAIL=${{ secrets.VITE_SUPER_ADMIN_EMAIL }}
+          EOF
+
+      - name: Terapkan branding white-label ke project Android (dari .env)
+        run: |
+          set -e
+          OLD_ID="com.gwg.superapp"
+          APP_ID=$(grep -m1 '^VITE_APP_ID=' .env | cut -d '=' -f2- || true)
+          SHORT_NAME=$(grep -m1 '^VITE_APP_SHORT_NAME=' .env | cut -d '=' -f2- || true)
+          APP_ID=${APP_ID:-$OLD_ID}
+          SHORT_NAME=${SHORT_NAME:-"GWG App"}
+
+          echo "App ID target : $APP_ID"
+          echo "Nama app target: $SHORT_NAME"
+          echo "APP_ID=$APP_ID" >> "$GITHUB_ENV"
+
+          # 1) capacitor.config.json
+          sed -i "s/\"appId\": \"$OLD_ID\"/\"appId\": \"$APP_ID\"/" capacitor.config.json
+          sed -i "s/\"appName\": \"GWG Super App\"/\"appName\": \"$SHORT_NAME\"/" capacitor.config.json
+
+          # 2) android/app/build.gradle (namespace & applicationId)
+          sed -i "s/namespace \"$OLD_ID\"/namespace \"$APP_ID\"/" android/app/build.gradle
+          sed -i "s/applicationId \"$OLD_ID\"/applicationId \"$APP_ID\"/" android/app/build.gradle
+
+          # 3) strings.xml
+          STRINGS=android/app/src/main/res/values/strings.xml
+          sed -i "s#<string name=\"app_name\">GWG Super App</string>#<string name=\"app_name\">$SHORT_NAME</string>#" "$STRINGS"
+          sed -i "s#<string name=\"title_activity_main\">GWG Super App</string>#<string name=\"title_activity_main\">$SHORT_NAME</string>#" "$STRINGS"
+          sed -i "s#<string name=\"package_name\">$OLD_ID</string>#<string name=\"package_name\">$APP_ID</string>#" "$STRINGS"
+          sed -i "s#<string name=\"custom_url_scheme\">$OLD_ID</string>#<string name=\"custom_url_scheme\">$APP_ID</string>#" "$STRINGS"
+
+          # 4) Pindahkan MainActivity.java ke folder paket baru (kalau appId berubah)
+          if [ "$APP_ID" != "$OLD_ID" ]; then
+            OLD_PATH="android/app/src/main/java/$(echo "$OLD_ID" | tr '.' '/')"
+            NEW_PATH="android/app/src/main/java/$(echo "$APP_ID" | tr '.' '/')"
+            mkdir -p "$NEW_PATH"
+            mv "$OLD_PATH/MainActivity.java" "$NEW_PATH/MainActivity.java"
+            sed -i "s/package $OLD_ID;/package $APP_ID;/" "$NEW_PATH/MainActivity.java"
+            find android/app/src/main/java -type d -empty -delete
+            echo "✅ Package Android diganti dari $OLD_ID ke $APP_ID"
+          else
+            echo "ℹ️ VITE_APP_ID sama dengan default GWG — tidak ada perubahan package."
+          fi
+
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java (dibutuhkan Gradle/Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          # Default action v3 memasang paket 'tools' yang sudah dihapus Google
+          # → sdkmanager gagal "Failed to find package 'tools'" (exit code 1).
+          # Cukup 'platform-tools'; cmdline-tools/sdkmanager tetap dipasang otomatis.
+          packages: platform-tools
+
+      - name: Install dependencies npm
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Build web app (Vite)
+        run: npm run build
+
+      - name: Tambahkan platform Android (Capacitor)
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          else
+            npx cap sync android
+          fi
+
+      - name: Sinkronkan aset web ke Android
+        run: npx cap sync android
+
+      # ✅ FIX: workflow ini sebelumnya TIDAK generate ikon sama sekali —
+      # ia diam-diam mengandalkan folder android/ hasil commit dari
+      # workflow "Build Android APK" (debug) yang sudah pernah generate
+      # ikon dari resources/icon.png. Kalau release ini dipicu duluan di
+      # fork baru (android/ belum pernah ada / belum pernah di-sync sejak
+      # resources/icon.png diganti), APK+AAB release bisa keluar dengan
+      # ikon default Capacitor (kotak putih polos) TANPA ada error atau
+      # peringatan apa pun. Generate ulang di sini supaya release build
+      # selalu konsisten dengan resources/icon.png saat ini, apa pun
+      # urutan workflow yang pernah dijalankan sebelumnya.
+      - name: Generate ikon aplikasi dari resources/icon.png
+        run: npx @capacitor/assets generate --android
+
+      - name: Verifikasi ikon bukan ikon default Capacitor
+        run: |
+          set -e
+          ICON="android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png"
+          if [ ! -f "$ICON" ]; then
+            echo "❌ File ikon tidak ditemukan di $ICON — generate ikon kemungkinan gagal."
+            exit 1
+          fi
+          SRC_HASH=$(sha256sum resources/icon.png | cut -d' ' -f1)
+          echo "Ikon sumber : resources/icon.png ($SRC_HASH)"
+          echo "Ikon hasil generate ada di $ICON — cek manual di artifact APK/AAB kalau ragu."
+
+      - name: Decode keystore release dari secret
+        working-directory: android/app
+        run: echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+
+      - name: Verifikasi keystore & password (debug, sebelum build APK)
+        working-directory: android/app
+        run: |
+          echo "Ukuran file release.keystore setelah decode: $(wc -c < release.keystore) bytes"
+          echo "SHA-256 file release.keystore: $(sha256sum release.keystore | cut -d' ' -f1)"
+          echo
+          echo "Cek 1/2: RELEASE_KEYSTORE_PASSWORD dan RELEASE_KEY_PASSWORD HARUS SAMA persis"
+          echo "(keystore format PKCS12 tidak mendukung keduanya beda — kalau beda,"
+          echo "keytool cuma bakal diam-diam pakai salah satu, dan build APK nanti"
+          echo "gagal baca key walau kelihatannya semua secret \"benar\")."
+          if [ "${{ secrets.RELEASE_KEYSTORE_PASSWORD }}" != "${{ secrets.RELEASE_KEY_PASSWORD }}" ]; then
+            echo "❌ RELEASE_KEYSTORE_PASSWORD dan RELEASE_KEY_PASSWORD BEDA. Update salah"
+            echo "   satu secret itu supaya isinya SAMA PERSIS, lalu jalankan ulang."
+            exit 1
+          fi
+          echo "✅ Keduanya sama."
+          echo
+          echo "Cek 2/2: mencoba baca alias dari keystore pakai password & alias di atas..."
+          OUTPUT=$(keytool -list -v \
+            -keystore release.keystore \
+            -alias "${{ secrets.RELEASE_KEY_ALIAS }}" \
+            -storepass "${{ secrets.RELEASE_KEYSTORE_PASSWORD }}" 2>&1) || {
+              echo "❌ keytool gagal membaca keystore ini. Pesan aslinya:"
+              echo "$OUTPUT"
+              echo
+              echo "Kemungkinan RELEASE_KEYSTORE_BASE64, RELEASE_KEYSTORE_PASSWORD, atau"
+              echo "RELEASE_KEY_ALIAS tidak cocok dengan keystore yang di-generate."
+              exit 1
+            }
+          echo "$OUTPUT" | grep -E "Alias name|Entry type|SHA1:|SHA256:|Valid from" | tee -a "$GITHUB_STEP_SUMMARY" || {
+            echo "⚠️ keytool jalan tapi tidak ada alias yang cocok. Output lengkap:"
+            echo "$OUTPUT"
+            exit 1
+          }
+          echo "✅ RELEASE_KEYSTORE_PASSWORD, RELEASE_KEY_ALIAS, dan RELEASE_KEY_PASSWORD cocok dengan keystore — lanjut build."
+
+      - name: Build APK release (signed)
+        working-directory: android
+        env:
+          RELEASE_KEYSTORE_PATH: release.keystore
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          EXTRA_ARGS=""
+          if [ -n "${{ github.event.inputs.versionName }}" ]; then
+            EXTRA_ARGS="-PversionName=${{ github.event.inputs.versionName }}"
+          fi
+          ./gradlew assembleRelease -PversionCode=${{ github.run_number }} $EXTRA_ARGS
+
+      - name: Build AAB release (signed) — untuk upload ke Play Console
+        working-directory: android
+        env:
+          RELEASE_KEYSTORE_PATH: release.keystore
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          EXTRA_ARGS=""
+          if [ -n "${{ github.event.inputs.versionName }}" ]; then
+            EXTRA_ARGS="-PversionName=${{ github.event.inputs.versionName }}"
+          fi
+          ./gradlew bundleRelease -PversionCode=${{ github.run_number }} $EXTRA_ARGS
+
+      - name: Hapus keystore dari workspace (jangan sampai ikut ke artifact)
+        if: always()
+        working-directory: android/app
+        run: rm -f release.keystore
+
+      - name: Upload APK release sebagai artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gwg-superapp-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload AAB release sebagai artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gwg-superapp-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
