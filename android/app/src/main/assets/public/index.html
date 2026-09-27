@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1" />
+    <!-- ✅ WHITE LABEL: judul tab, warna status bar, dan nama di homescreen
+         (PWA/APK) tidak bisa diambil dari localStorage (baru terbaca setelah
+         JS jalan) — nilai-nilai ini dibakar saat BUILD, lewat file .env di
+         root project. Vite otomatis mengganti %NAMA_VAR% di HTML ini dengan
+         isi variabel dari .env. Kalau belum diisi, tetap pakai nilai bawaan
+         GWG di bawah. -->
+    <meta name="theme-color" content="" />
+    <title></title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+
+    <!-- iOS PWA support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: 'Inter', system-ui, sans-serif; }
+    </style>
+    <script type="module" crossorigin src="/assets/index-DEmpeUtc.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-capacitor-BpGKRkhW.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react-N3OQIIjb.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-Bx9dcAnX.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-firebase-DXogi6v-.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-icons-C4p33a4a.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-xlsx-8goRKRe6.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-jspdf-BnhylwG7.js">
+  <link rel="manifest" href="/manifest.webmanifest"></head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
